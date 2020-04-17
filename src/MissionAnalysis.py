@@ -78,7 +78,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             try:
                 position = Vector3D(float(satellite["x"]), float(satellite["y"]), float(satellite["z"]))
                 velocity = Vector3D(float(satellite["vx"]), float(satellite["vy"]), float(satellite["vz"]))
-                orbit = KeplerianOrbit(PVCoordinates(position, velocity), FramesFactory.getEME2000(),
+                orbit = KeplerianOrbit(PVCoordinates(position, velocity), self.inertialFrame,
                                        self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,

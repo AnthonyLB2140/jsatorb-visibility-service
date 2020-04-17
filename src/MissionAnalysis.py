@@ -1,6 +1,9 @@
 import orekit
 vm = orekit.initVM()
 
+import sys
+sys.path.append('../../jsatorb-common/src/')
+from listCelestialBodies import listCelestialBodies
 
 from PropagationTimeSettings import PropagationTimeSettings
 from OEMAndJSONConverter import OEMAndJSONConverter
@@ -25,17 +28,32 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
     visibility if ground station has been added
     """
 
-    def __init__(self, timeStep, duration):
+    def __init__(self, timeStep, duration, bodyString):
         """Constructor specifies the time settings of the propagation """
         #Heritage Method
         PropagationTimeSettings.__init__(self, int(timeStep), int(duration))
 
+        celestialBody = CelestialBodyFactory.getBody(bodyString.upper())
+        if bodyString.upper() == 'EARTH':
+            bodyFrame = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
+            self.inertialFrame = FramesFactory.getEME2000()
+        else:
+            bodyFrame = celestialBody.getBodyOrientedFrame()
+            #self.inertialFrame = body.getInertiallyOrientedFrame()
+            self.inertialFrame = FramesFactory.getEME2000()
+
+        celestialBodyShape = listCelestialBodies.getBody(bodyString.upper())
+        radiusBody = celestialBodyShape.radius
+        flatBody = celestialBodyShape.flattening
+        self.body = OneAxisEllipsoid(radiusBody, flatBody, bodyFrame)
+        self.mu = celestialBody.getGM()
+
         #Needed Constant Init
-        self.ae = Constants.WGS84_EARTH_EQUATORIAL_RADIUS
-        self.mu = Constants.WGS84_EARTH_MU
+        #self.ae = Constants.WGS84_EARTH_EQUATORIAL_RADIUS
+        #self.mu = Constants.WGS84_EARTH_MU
 
         #Parameter Init
-        self.inertialFrame = FramesFactory.getEME2000()
+        #self.inertialFrame = FramesFactory.getEME2000()
         self.satelliteList = {} # Satellite List saved like a KeplerianOrbit, Key of Element is satellite Name
         self.tleList = {}
         self.rawEphemeridsList = {} # epoch, x, y, z, vx, vy, vz data sor by satellite Name
@@ -105,12 +123,13 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         :param groundStation:
         :return:
         """
-        ITRF = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
+        #ITRF = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
         station = GeodeticPoint(radians(float(groundStation["latitude"])),radians(float(groundStation["longitude"])), float(groundStation["altitude"]))
-        earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-                                 Constants.WGS84_EARTH_FLATTENING,
-                                 ITRF)
-        stationFrame = TopocentricFrame(earth, station, groundStation["name"])
+        #earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
+        #                         Constants.WGS84_EARTH_FLATTENING,
+        #                         ITRF)
+    
+        stationFrame = TopocentricFrame(self.body, station, groundStation["name"])
         self.groundStationList[groundStation["name"]] = { "station": stationFrame, "passing": False,
                                                           "elev": float(groundStation["elevation"]) }
 

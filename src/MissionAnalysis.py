@@ -3,7 +3,7 @@ vm = orekit.initVM()
 
 import sys
 sys.path.append('../../jsatorb-common/src/')
-from listCelestialBodies import listCelestialBodies
+from ListCelestialBodies import ListCelestialBodies
 
 from PropagationTimeSettings import PropagationTimeSettings
 from OEMAndJSONConverter import OEMAndJSONConverter
@@ -42,7 +42,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             #self.inertialFrame = body.getInertiallyOrientedFrame()
             self.inertialFrame = FramesFactory.getEME2000()
 
-        celestialBodyShape = listCelestialBodies.getBody(bodyString.upper())
+        celestialBodyShape = ListCelestialBodies.getBody(bodyString.upper())
         radiusBody = celestialBodyShape.radius
         flatBody = celestialBodyShape.flattening
         self.body = OneAxisEllipsoid(radiusBody, flatBody, bodyFrame)

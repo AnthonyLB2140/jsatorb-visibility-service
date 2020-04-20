@@ -59,7 +59,7 @@ class OEMAndJSONConverter:
             oemTemplate = f.read()
 
         output = Template(oemTemplate)
-        timeNow = str(datetime.utcnow())
+        timeNow = datetime.utcnow().isoformat()
         return output.render(timeNow=timeNow, satellitesResult=self.listData)
 
 

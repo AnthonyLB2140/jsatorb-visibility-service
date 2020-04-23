@@ -28,10 +28,10 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
     visibility if ground station has been added
     """
 
-    def __init__(self, timeStep, duration, bodyString):
+    def __init__(self, timeStep, dateEnd, bodyString):
         """Constructor specifies the time settings of the propagation """
         #Heritage Method
-        PropagationTimeSettings.__init__(self, int(timeStep), int(duration))
+        PropagationTimeSettings.__init__(self, int(timeStep), str(dateEnd))
 
         celestialBody = CelestialBodyFactory.getBody(bodyString.upper())
         if bodyString.upper() == 'EARTH':
@@ -106,14 +106,12 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                 raise NameError("start time is not define")
 
         elif(satellite["type"] == "tle"):
-            line1 = satellite["line1"]
-            line2 = satellite["line2"]
             tle = TLE(satellite["line1"], satellite["line2"])
             propagator = TLEPropagator.selectExtrapolator(tle)
             self.absoluteStartTime = tle.getDate()
-            self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
+            #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
-                "initialSate": tle,
+                "initialState": tle,
                 "propagator": propagator
             }
 
@@ -177,7 +175,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
                 # Format and Append position propagate to array
                 currData = {
-                    "epoch": str(self.absDate2ISOString(currState.getDate())),
+                    "epoch": currState.getDate().toString(),
                     "x": round(position.getX(), 7),
                     "y": round(position.getY(), 7),
                     "z": round(position.getZ(), 7),
@@ -204,14 +202,14 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                         ## FIN LUPIN CODE
                         if not self.visibilityMatrice[gsKey][satKey] or self.visibilityMatrice[gsKey][satKey][
                                 -1]["passing"] == False:
-                            temp_data['startDate'] = str(self.absDate2datetime(currState.getDate()))
+                            temp_data['startDate'] = currState.getDate().toString()
                             temp_data['startAz'] = az_tmp
                             temp_data['passing'] = True
                             self.visibilityMatrice[gsKey][satKey].append(temp_data)
                     else:
                         ## Si le tableau a dejà commencé à être rempli et que la matrice de visibilitié
                         if  len(self.visibilityMatrice[gsKey][satKey])>0 and self.visibilityMatrice[gsKey][satKey][-1]["passing"] == True:
-                            self.visibilityMatrice[gsKey][satKey][-1]["endDate"] = str(self.absDate2datetime(currState.getDate()))
+                            self.visibilityMatrice[gsKey][satKey][-1]["endDate"] = currState.getDate().toString()
                             self.visibilityMatrice[gsKey][satKey][-1]["endAz"] = az_tmp
                             self.visibilityMatrice[gsKey][satKey][-1]["passing"] = False
 
@@ -327,7 +325,7 @@ if __name__ == "__main__":
     start = time.time()
 
     #Init time of the mission analysis ( initial date, step between propagation, and duration)
-    myPropagation = HAL_MissionAnalysis(1, 6000)
+    myPropagation = HAL_MissionAnalysis(1, "2019-02-22T18:40:00Z", 'EARTH')
     myPropagation.setStartingDate("2019-02-22T18:30:00Z")
 
     #Add my ground station

@@ -15,27 +15,26 @@ class PropagationTimeSettings:
     visibility if ground station has been added
     """
 
-    def __init__(self, timeStep, duration):
-        #Initialate Date
+    def __init__(self, timeStep, endDateString):
+        #Initiate Date
 
         self.utc = TimeScalesFactory.getUTC()
 
         #self.absoluteStartTime = AbsoluteDate(startingTime, self.utc)
         self.timeStep = float(timeStep)
-        self.duration=float(duration)
+        self.absoluteEndTime = AbsoluteDate(endDateString, self.utc)
 
     def setStartTime(self, stringUTCDate):
         self.absoluteStartTime = AbsoluteDate(stringUTCDate, self.utc)
-        self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
 
-    def setEndingDate(self, strinUTCDate):
+    def setEndingDate(self, stringUTCDate):
         """
         Set propagation datetime end
         datetime is in the UTC format
         :param absoluteDate:
         :return:
         """
-        self.absoluteEndTime = AbsoluteDate(strinUTCDate, self.utc)
+        self.absoluteEndTime = AbsoluteDate(stringUTCDate, self.utc)
 
     def setStepTimeBetweenPropagation(self, secNumberStepTime):
         """

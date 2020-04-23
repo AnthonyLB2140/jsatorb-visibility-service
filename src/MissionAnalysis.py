@@ -2,7 +2,7 @@ import orekit
 vm = orekit.initVM()
 
 import sys
-sys.path.append('../../jsatorb-common/src/')
+sys.path.append('../jsatorb-common/src/')
 from ListCelestialBodies import ListCelestialBodies
 
 from PropagationTimeSettings import PropagationTimeSettings
@@ -34,13 +34,14 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         PropagationTimeSettings.__init__(self, int(timeStep), str(dateEnd))
 
         celestialBody = CelestialBodyFactory.getBody(bodyString.upper())
+        self.nameBody = celestialBody.getName()
         if bodyString.upper() == 'EARTH':
             bodyFrame = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
             self.inertialFrame = FramesFactory.getEME2000()
         else:
             bodyFrame = celestialBody.getBodyOrientedFrame()
-            #self.inertialFrame = body.getInertiallyOrientedFrame()
-            self.inertialFrame = FramesFactory.getEME2000()
+            self.inertialFrame = celestialBody.getInertiallyOrientedFrame()
+            #self.inertialFrame = FramesFactory.getEME2000()
 
         celestialBodyShape = ListCelestialBodies.getBody(bodyString.upper())
         radiusBody = celestialBodyShape.radius
@@ -87,7 +88,8 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                                        PositionAngle.TRUE, self.inertialFrame, self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,
-                    "propagator": KeplerianPropagator(orbit)
+                    "propagator": KeplerianPropagator(orbit),
+                    "celestialBody": self.nameBody
                 }
             except:
                 raise NameError("start time is not defined.")
@@ -100,7 +102,8 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                                        self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,
-                    "propagator": KeplerianPropagator(orbit)
+                    "propagator": KeplerianPropagator(orbit),
+                    "celestialBody": self.nameBody
                 }
             except:
                 raise NameError("start time is not define")
@@ -112,7 +115,8 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
                 "initialState": tle,
-                "propagator": propagator
+                "propagator": propagator,
+                "celestialBody": self.nameBody
             }
 
     def addGroundStation(self, groundStation):
@@ -244,7 +248,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         :return:
         """
         assert (self.formatedData is not None)
-        return self.formatedData.getOEM()
+        return self.formatedData.getOEM(self.nameBody)
 
     def getVisibility(self):
         """
@@ -326,7 +330,7 @@ if __name__ == "__main__":
 
     #Init time of the mission analysis ( initial date, step between propagation, and duration)
     myPropagation = HAL_MissionAnalysis(1, "2019-02-22T18:40:00Z", 'EARTH')
-    myPropagation.setStartingDate("2019-02-22T18:30:00Z")
+    myPropagation.setStartTime("2019-02-22T18:30:00Z")
 
     #Add my ground station
     myPropagation.addGroundStation(isae)

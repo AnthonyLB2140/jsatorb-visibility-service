@@ -49,7 +49,7 @@ class OEMAndJSONConverter:
 
         return result
 
-    def getOEM(self):
+    def getOEM(self, centralBody):
         """
         Get the OEM data related to the data result use in the constructor
         :return:
@@ -60,7 +60,8 @@ class OEMAndJSONConverter:
 
         output = Template(oemTemplate)
         timeNow = datetime.utcnow().isoformat()
-        return output.render(timeNow=timeNow, satellitesResult=self.listData)
+        centralBody = centralBody.lower().capitalize()
+        return output.render(timeNow=timeNow, celestialBody=centralBody, satellitesResult=self.listData)
 
 
 if __name__ == "__main__":

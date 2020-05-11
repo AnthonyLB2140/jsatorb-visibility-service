@@ -40,8 +40,8 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             self.inertialFrame = FramesFactory.getEME2000()
         else:
             bodyFrame = celestialBody.getBodyOrientedFrame()
-            #self.inertialFrame = celestialBody.getInertiallyOrientedFrame()
-            self.inertialFrame = FramesFactory.getEME2000()
+            self.inertialFrame = celestialBody.getInertiallyOrientedFrame()
+            #self.inertialFrame = FramesFactory.getEME2000()
 
         celestialBodyShape = ListCelestialBodies.getBody(bodyString.upper())
         radiusBody = celestialBodyShape.radius

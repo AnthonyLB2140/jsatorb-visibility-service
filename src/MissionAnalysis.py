@@ -84,8 +84,8 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                 orbit = KeplerianOrbit(float(satellite["sma"]), float(satellite["ecc"]),
                                        radians(float(satellite["inc"])),
                                        radians(float(satellite["pa"])), radians(float(satellite["raan"])),
-                                       float(satellite["meanAnomaly"]),
-                                       PositionAngle.TRUE, self.inertialFrame, self.absoluteStartTime, self.mu)
+                                       radians(float(satellite["meanAnomaly"])),
+                                       PositionAngle.MEAN, self.inertialFrame, self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,
                     "propagator": KeplerianPropagator(orbit),

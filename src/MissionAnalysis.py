@@ -92,7 +92,12 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                     "celestialBody": self.nameBody
                 }
             except:
-                raise NameError("start time is not defined.")
+                raise NameError("start time is not defined")
+
+            # Check if satellite outside central body
+            if orbit.getA() < self.body.getEquatorialRadius():
+                print("WARNING: semi-major axis smaller than Equatorial Radius!")
+
 
         elif(satellite["type"] == "cartesian"):
             try:
@@ -106,7 +111,11 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                     "celestialBody": self.nameBody
                 }
             except:
-                raise NameError("start time is not define")
+                raise NameError("start time is not defined")
+
+            # Check if satellite outside central body
+            if orbit.getA() < self.body.getEquatorialRadius():
+                print("WARNING: semi-major axis smaller than Equatorial Radius!")
 
         elif(satellite["type"] == "tle"):
             tle = TLE(satellite["line1"], satellite["line2"])
@@ -118,6 +127,12 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                 "propagator": propagator,
                 "celestialBody": self.nameBody
             }
+
+            # Check if satellite outside central body
+            nCur = tle.getMeanMotion() # in rad/s
+            radiusCur = muBody**(1./3.) / nCur**(2./3.)
+            if radiusCur < self.body.getEquatorialRadius():
+                print("WARNING: initial radius smaller than Equatorial Radius!")
 
     def addGroundStation(self, groundStation):
         """

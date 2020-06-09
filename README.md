@@ -1,24 +1,29 @@
-# Mission Analysis
+# JSatOrb project: Mission Analysis
 
-This code use orekit to make satellites propagation and visibility calculations related to ground stations.
-It is mainly used for the generation of OEM files through the FileGenerator class in the ../jsatorb-common/VTS folder [doc here](../jsatorb-common/VTS/README.md).
-The central body can be chosen in the list provided by Orekit [see doc](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html).
-The satellite coordinates in the request and in the response are expressed in the EME2000 inertial frame for Earth, and in the inertial frame associated with the central body for other central bodies as defined by Orekit (celestial body provided by `CelestialBodyFactory` class [see doc](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html) and inertial frame provided by `getInertiallyOrientedFrame` [see doc](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBody.html#getInertiallyOrientedFrame--)).
+This module uses Orekit to process satellites propagation and visibility calculations related to ground stations.  
+It is mainly used for the generation of OEM files through the FileGenerator class in the ../jsatorb-common/VTS folder. [The corresponding documentation is here](../jsatorb-common/VTS/README.md).  
 
-For Keplerian and Cartesian satellites, the propagator is an analytical Keplerian propagator [see doc](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html).
-For TLE satellites, the propagator is the Orekit propagator dedicated to TLEs [see doc](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/propagation/analytical/tle/TLEPropagator.html).
+The central body can be chosen in the list provided by Orekit ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)).  
+
+The satellite coordinates in the request and in the response are expressed in the EME2000 inertial frame for Earth, and in the inertial frame associated with the central body for other central bodies as defined by Orekit (celestial body provided by `CelestialBodyFactory` class ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)) and inertial frame provided by `getInertiallyOrientedFrame` ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBody.html#getInertiallyOrientedFrame--)).  
+
+For Keplerian and Cartesian satellites, the propagator is an analytical Keplerian propagator ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)).  
+For TLE satellites, the propagator is the Orekit propagator dedicated to TLEs ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/propagation/analytical/tle/TLEPropagator.html)).  
 
 Since TLEs specify a date, the actual initial date is the latest date between the chosen initial date and all TLE dates.
 
 ## Prerequisites
+
 - Python3.7
 - A specific Python environment (named JSatOrbEnv) containing the following packages (installed through the conda-forge channel):
-        - Orekit 10.2 (embedding hipparchus),
-        - jinja2,
-        - and bottle.
+    - Orekit 10.2 (embedding hipparchus),
+    - jinja2,
+    - and bottle.
+
 
 ## Launch the service
-This module is accessible through the JSatOrb centralized REST API which can be launched through the following commands:
+
+This module is accessible through the JSatOrb centralized REST API which can be launched using the following commands:
 
 Go into the REST API folder
 ```
@@ -32,13 +37,17 @@ Run the REST API
 ```
 python src/JSatOrbREST.py
 ```
-By default the service is running on the **port 8000**.
+By default the service is running on **port 8000**.
+
 
 ## Request and Response Examples
-Examples of OEM file generation (main purpose of this code) can be found in [the doc here](../jsatorb-common/test-rest/fileGenerator-request.http), through the `FileGenerator.py` class.
+
+Examples of OEM file generation (main purpose of this code) can be found in [the document here](../jsatorb-common/test-rest/fileGenerator-request.http), through the `FileGenerator.py` class.  
 It can also be used to compute visibilities, even though they can also be computed in the ../jsatorb-common/MEM folder.
 
+
 ### Visibility Request Example
+
 Route : /propagation/visibility', POST method
 ```json
 {

@@ -130,7 +130,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
             # Check if satellite outside central body
             nCur = tle.getMeanMotion() # in rad/s
-            radiusCur = muBody**(1./3.) / nCur**(2./3.)
+            radiusCur = self.mu**(1./3.) / nCur**(2./3.)
             if radiusCur < self.body.getEquatorialRadius():
                 print("WARNING: initial radius smaller than Equatorial Radius!")
 

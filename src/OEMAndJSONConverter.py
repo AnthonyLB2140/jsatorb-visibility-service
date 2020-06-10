@@ -29,6 +29,7 @@ class OEMAndJSONConverter:
         Generate and return the JSON data related to the data result use in the constructor
         :return:
         """
+
         result = []
         for key, value in self.listData.items():
             jsonObj = {}

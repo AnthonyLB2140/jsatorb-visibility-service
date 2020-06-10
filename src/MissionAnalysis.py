@@ -120,9 +120,13 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         elif(satellite["type"] == "tle"):
             tle = TLE(satellite["line1"], satellite["line2"])
             propagator = TLEPropagator.selectExtrapolator(tle)
-            self.absoluteStartTime = tle.getDate()
+            #self.absoluteStartTime = tle.getDate()
+            if tle.getDate().compareTo(self.absoluteStartTime) > 0:
+                self.absoluteStartTime = tle.getDate()
+    
             #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
+                "isTLE": True,
                 "initialState": tle,
                 "propagator": propagator,
                 "celestialBody": self.nameBody
@@ -167,8 +171,15 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         """
         #Initialize lupinArray that will store object
 
+        # TLEs have to catch up to one another
+        for satName, sat in self.satelliteList.items():
+            initialDateCur = sat["initialState"].getDate()
+            if "isTLE" in sat and initialDateCur.compareTo(self.absoluteStartTime) < 0:
+                sat["propagator"].propagate(self.absoluteStartTime)
+                sat["initialState"] = sat["propagator"].getTLE()
+                print("Initialization: TLE of {} was propagated from {} to {}".format(satName, initialDateCur, self.absoluteStartTime))
 
-        # Initialze python array in dictionary
+        # Initialize python array in dictionary
         for key, value in self.satelliteList.items():
             self.rawEphemeridsList[key] = []
 
@@ -183,6 +194,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
         # Propagate
         extrapDate = self.absoluteStartTime
+        print("Start date considered: {}".format(extrapDate.toString()))
         while (extrapDate.compareTo(self.absoluteEndTime) <= 0.0):
             for satKey, satValue in self.satelliteList.items():
                 currState = satValue['propagator'].propagate(extrapDate)

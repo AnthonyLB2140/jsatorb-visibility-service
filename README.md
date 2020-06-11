@@ -133,4 +133,28 @@ Route : /propagation/visibility', POST method
 ```
 
 ## Module's sequence diagram
-TBD
+
+```plantuml
+@startuml
+    skinparam backgroundColor #EEEBDC
+    skinparam handwritten false
+    actor Student
+    Student -> "JSatOrb GUI" : JSON request
+    "JSatOrb GUI" -> "REST API" : code call
+    activate "REST API"
+    "REST API" -> "BACKEND MissionAnalysis.py" : code call
+    "BACKEND MissionAnalysis.py" -> Orekit : processing orbit propagation and storing ephemerides, and/or visibility dates
+    Orekit -> "BACKEND MissionAnalysis.py" : returning ephemerides and/or visibility dates
+    "BACKEND MissionAnalysis.py" -> "OEMAndJSONConverter.py" : conversion call
+    "OEMAndJSONConverter.py" -> "BACKEND MissionAnalysis.py" : returning ephemerides and/or visibility dates in specified format
+    "BACKEND MissionAnalysis.py" -> "REST API" : returning ephemerides and/or visibility dates
+    "REST API" -> "JSatOrb GUI" : returning ephemerides and/or visibility dates
+    deactivate "REST API"    
+@enduml
+```
+
+``` 
+JSatOrb client can be the Web GUI or a batch client.
+The REST API is the centralized REST API which code is in the jsatorb-rest-apî/JSatOrbREST.py Python module.
+The back-end code is in the jsatorb-visibility-service/src Python folder.
+```

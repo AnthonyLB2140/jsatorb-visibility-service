@@ -3,7 +3,7 @@
 This module uses Orekit to process satellites propagation and visibility calculations related to ground stations.  
 It is mainly used for the generation of OEM files through the FileGenerator class in the ../jsatorb-common/VTS folder. [The corresponding documentation is here](../jsatorb-common/VTS/README.md).  
 
-The central body can be chosen in the list provided by Orekit ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)).  
+The central body can be chosen in the list provided by Orekit [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html).  
 
 The satellite coordinates in the request and in the response are expressed in the EME2000 inertial frame for Earth, and in the inertial frame associated with the central body for other central bodies as defined by Orekit (celestial body provided by `CelestialBodyFactory` class ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)) and inertial frame provided by `getInertiallyOrientedFrame` ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBody.html#getInertiallyOrientedFrame--)).  
 

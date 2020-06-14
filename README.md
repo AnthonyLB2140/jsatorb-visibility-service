@@ -5,12 +5,13 @@ It is mainly used for the generation of OEM files through the FileGenerator clas
 
 The central body can be chosen in the list provided by Orekit [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html).  
 
-The satellite coordinates in the request and in the response are expressed in the EME2000 inertial frame for Earth, and in the inertial frame associated with the central body for other central bodies as defined by Orekit (celestial body provided by `CelestialBodyFactory` class ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)) and inertial frame provided by `getInertiallyOrientedFrame` ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBody.html#getInertiallyOrientedFrame--)).  
+The satellite coordinates in the request and in the response are expressed in the EME2000 inertial frame for Earth, and in the inertial frame associated with the central body for other central bodies as defined by Orekit (celestial body provided by `CelestialBodyFactory` class [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html) and inertial frame provided by `getInertiallyOrientedFrame` [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBody.html#getInertiallyOrientedFrame--).  
 
-For Keplerian and Cartesian satellites, the propagator is an analytical Keplerian propagator ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html)).  
-For TLE satellites, the propagator is the Orekit propagator dedicated to TLEs ([see this document](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/propagation/analytical/tle/TLEPropagator.html)).  
+For Keplerian and Cartesian satellites, the propagator is an analytical Keplerian propagator [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/bodies/CelestialBodyFactory.html).  
+For TLE satellites, the propagator is the Orekit propagator dedicated to TLEs [(see this document)](https://www.orekit.org/site-orekit-10.1/apidocs/org/orekit/propagation/analytical/tle/TLEPropagator.html).  
 
 Since TLEs specify a date, the actual initial date is the latest date between the chosen initial date and all TLE dates.
+
 
 ## Prerequisites
 
@@ -99,38 +100,12 @@ Route : /propagation/visibility', POST method
         "endDate": "2011-12-02T03:03:45.000",
         "endAz": 59.41780052967108
       },
-      {
-        "startDate": "2011-12-02T04:32:45.000",
-        "startAz": 275.47498054983356,
-        "passing": false,
-        "endDate": "2011-12-02T04:40:45.000",
-        "endAz": 51.51937331088964
-      },
-      {
-        "startDate": "2011-12-02T06:10:45.000",
-        "startAz": 305.39802356627996,
-        "passing": false,
-        "endDate": "2011-12-02T06:18:45.000",
-        "endAz": 67.11220899606028
-      },
-      {
-        "startDate": "2011-12-02T07:47:45.000",
-        "startAz": 309.57927845815976,
-        "passing": false,
-        "endDate": "2011-12-02T07:56:45.000",
-        "endAz": 98.90530554801903
-      },
-      {
-        "startDate": "2011-12-02T09:24:45.000",
-        "startAz": 294.857556791552,
-        "passing": false,
-        "endDate": "2011-12-02T09:33:45.000",
-        "endAz": 141.97263349973483
-      }
+      [...]
     ]
   }
 }
 ```
+
 
 ## Module's sequence diagram
 
@@ -139,22 +114,19 @@ Route : /propagation/visibility', POST method
     skinparam backgroundColor #EEEBDC
     skinparam handwritten false
     actor Student
-    Student -> "JSatOrb GUI" : JSON request
-    "JSatOrb GUI" -> "REST API" : code call
+    Student -> "REST API" : JSON request
     activate "REST API"
-    "REST API" -> "BACKEND MissionAnalysis.py" : code call
-    "BACKEND MissionAnalysis.py" -> Orekit : processing orbit propagation and storing ephemerides, and/or visibility dates
-    Orekit -> "BACKEND MissionAnalysis.py" : returning ephemerides and/or visibility dates
-    "BACKEND MissionAnalysis.py" -> "OEMAndJSONConverter.py" : conversion call
-    "OEMAndJSONConverter.py" -> "BACKEND MissionAnalysis.py" : returning ephemerides and/or visibility dates in specified format
-    "BACKEND MissionAnalysis.py" -> "REST API" : returning ephemerides and/or visibility dates
-    "REST API" -> "JSatOrb GUI" : returning ephemerides and/or visibility dates
+    "REST API" -> "BACKEND MissionAnalysis.py" : mission data set
+    "BACKEND MissionAnalysis.py" -> Orekit : orbit
+    Orekit -> "BACKEND MissionAnalysis.py" : propagated orbit
+    "BACKEND MissionAnalysis.py" -> "OEMAndJSONConverter.py" : positions, velocities, and/or visibility dates
+    "OEMAndJSONConverter.py" -> "BACKEND MissionAnalysis.py" : ephemerides/visibility dates in specified format
+    "BACKEND MissionAnalysis.py" -> "REST API" : returning ephemerides/visibility dates
     deactivate "REST API"    
 @enduml
 ```
-
-``` 
-JSatOrb client can be the Web GUI or a batch client.
-The REST API is the centralized REST API which code is in the jsatorb-rest-apî/JSatOrbREST.py Python module.
-The back-end code is in the jsatorb-visibility-service/src Python folder.
-```
+ 
+_Remarks:_
+- JSatOrb client can be the Web GUI or a batch client.
+- The REST API is the centralized REST API which code is in the jsatorb-rest-apî/JSatOrbREST.py Python module.
+- The back-end code is in the jsatorb-visibility-service/src Python folder.

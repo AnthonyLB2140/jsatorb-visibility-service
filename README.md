@@ -106,6 +106,8 @@ Route : /propagation/visibility', POST method
 }
 ```
 
+Other examples of requests can be found [in the visibility REST test file](../jsatorb-rest-api/test-rest/visibility-request.http).
+
 
 ## Module's sequence diagram
 

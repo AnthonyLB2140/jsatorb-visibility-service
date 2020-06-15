@@ -20,6 +20,23 @@ from org.orekit.propagation.analytical.tle import TLE, TLEPropagator
 from org.orekit.python import PythonEventHandler, PythonOrekitFixedStepHandler
 from math import radians, pi, degrees
 
+def WarningSMA(satType, satOrbit, centralBody, mu):
+    """
+    Function that issues a simple warning if the satellite's SMA is smaller
+    than the equatorial radius of the body.
+    For a TLE, the considered distance is the one deducted from the mean
+    motion.
+    It does not necessarily means the orbit will intersect the body.
+    """
+
+    if satType == 'cartesian' or satType == 'keplerian':
+        if satOrbit.getA() < centralBody.getEquatorialRadius():
+            print("WARNING: semi-major axis smaller than Equatorial Radius!")
+    elif satType == 'TLE':
+        nCur = satOrbit.getMeanMotion() # in rad/s
+        radiusCur = mu**(1./3.) / nCur**(2./3.)
+        if radiusCur < centralBody.getEquatorialRadius():
+            print("WARNING: initial semi-major axis smaller than Equatorial Radius!")
 
 class HAL_MissionAnalysis(PropagationTimeSettings):
     """
@@ -94,11 +111,6 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             except:
                 raise NameError("start time is not defined")
 
-            # Check if satellite outside central body
-            if orbit.getA() < self.body.getEquatorialRadius():
-                print("WARNING: semi-major axis smaller than Equatorial Radius!")
-
-
         elif(satellite["type"] == "cartesian"):
             try:
                 position = Vector3D(float(satellite["x"]), float(satellite["y"]), float(satellite["z"]))
@@ -113,30 +125,22 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
             except:
                 raise NameError("start time is not defined")
 
-            # Check if satellite outside central body
-            if orbit.getA() < self.body.getEquatorialRadius():
-                print("WARNING: semi-major axis smaller than Equatorial Radius!")
-
         elif(satellite["type"] == "tle"):
-            tle = TLE(satellite["line1"], satellite["line2"])
-            propagator = TLEPropagator.selectExtrapolator(tle)
-            #self.absoluteStartTime = tle.getDate()
-            if tle.getDate().compareTo(self.absoluteStartTime) > 0:
-                self.absoluteStartTime = tle.getDate()
+            orbit = TLE(satellite["line1"], satellite["line2"])
+            propagator = TLEPropagator.selectExtrapolator(orbit)
+            if orbit.getDate().compareTo(self.absoluteStartTime) > 0:
+                self.absoluteStartTime = orbit.getDate()
     
             #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
                 "isTLE": True,
-                "initialState": tle,
+                "initialState": orbit,
                 "propagator": propagator,
                 "celestialBody": self.nameBody
             }
 
-            # Check if satellite outside central body
-            nCur = tle.getMeanMotion() # in rad/s
-            radiusCur = self.mu**(1./3.) / nCur**(2./3.)
-            if radiusCur < self.body.getEquatorialRadius():
-                print("WARNING: initial radius smaller than Equatorial Radius!")
+        # Check if satellite outside central body
+        WarningSMA(satellite["type"], orbit, self.body, self.mu)
 
     def addGroundStation(self, groundStation):
         """
@@ -194,7 +198,6 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
         # Propagate
         extrapDate = self.absoluteStartTime
-        print("Start date considered: {}".format(extrapDate.toString()))
         while (extrapDate.compareTo(self.absoluteEndTime) <= 0.0):
             for satKey, satValue in self.satelliteList.items():
                 currState = satValue['propagator'].propagate(extrapDate)

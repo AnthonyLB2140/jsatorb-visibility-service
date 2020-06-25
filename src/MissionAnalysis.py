@@ -1,3 +1,5 @@
+# Original author: ISAE, continued by CS Group
+
 import orekit
 vm = orekit.initVM()
 
@@ -43,6 +45,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
     Class that permit to propagate TLE, KEPLERIAN, CARTESIAN Satellite position to RETURN :
     ephemerids (on a JSON format or CCSDS file)
     visibility if ground station has been added
+    The visibility is currently not used in JSatOrb but can still be called by the REST API.
     """
 
     def __init__(self, timeStep, dateEnd, bodyString):

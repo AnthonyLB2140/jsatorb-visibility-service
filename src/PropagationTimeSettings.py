@@ -1,6 +1,7 @@
+# Original author: ISAE, continued by CS Group
+
 import orekit
 vm = orekit.initVM()
-
 
 from orekit.pyhelpers import setup_orekit_curdir
 setup_orekit_curdir()

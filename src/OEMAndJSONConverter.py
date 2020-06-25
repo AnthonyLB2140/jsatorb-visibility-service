@@ -1,3 +1,5 @@
+# Original author: ISAE, continued by CS Group
+
 import json
 from jinja2 import Environment, PackageLoader, select_autoescape, Template, FileSystemLoader
 from datetime import datetime
@@ -6,7 +8,7 @@ import copy
 
 class OEMAndJSONConverter:
     """
-    This class permit to convert an a JSON File into an OEM text file
+    This class permits to convert an a JSON File into an OEM text file
     """
 
     def __init__(self, PropagationResultList):
@@ -27,7 +29,7 @@ class OEMAndJSONConverter:
     def getJSON(self):
         """
         Generate and return the JSON data related to the data result use in the constructor
-        :return:
+        Not used in the current version of JSatOrb
         """
 
         result = []

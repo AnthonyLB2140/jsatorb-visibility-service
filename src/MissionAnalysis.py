@@ -1,6 +1,11 @@
+# Original author: ISAE, continued by CS Group
+
 import orekit
 vm = orekit.initVM()
 
+import sys
+sys.path.append('../jsatorb-common/src/')
+from ListCelestialBodies import ListCelestialBodies
 
 from PropagationTimeSettings import PropagationTimeSettings
 from OEMAndJSONConverter import OEMAndJSONConverter
@@ -17,25 +22,59 @@ from org.orekit.propagation.analytical.tle import TLE, TLEPropagator
 from org.orekit.python import PythonEventHandler, PythonOrekitFixedStepHandler
 from math import radians, pi, degrees
 
+def WarningSMA(satType, satOrbit, centralBody, mu):
+    """
+    Function that issues a simple warning if the satellite's SMA is smaller
+    than the equatorial radius of the body.
+    For a TLE, the considered distance is the one deducted from the mean
+    motion.
+    It does not necessarily means the orbit will intersect the body.
+    """
+
+    if satType == 'cartesian' or satType == 'keplerian':
+        if satOrbit.getA() < centralBody.getEquatorialRadius():
+            print("WARNING: semi-major axis smaller than Equatorial Radius!")
+    elif satType == 'TLE':
+        nCur = satOrbit.getMeanMotion() # in rad/s
+        radiusCur = mu**(1./3.) / nCur**(2./3.)
+        if radiusCur < centralBody.getEquatorialRadius():
+            print("WARNING: initial semi-major axis smaller than Equatorial Radius!")
 
 class HAL_MissionAnalysis(PropagationTimeSettings):
     """
     Class that permit to propagate TLE, KEPLERIAN, CARTESIAN Satellite position to RETURN :
     ephemerids (on a JSON format or CCSDS file)
     visibility if ground station has been added
+    The visibility is currently not used in JSatOrb but can still be called by the REST API.
     """
 
-    def __init__(self, timeStep, duration):
+    def __init__(self, timeStep, dateEnd, bodyString):
         """Constructor specifies the time settings of the propagation """
         #Heritage Method
-        PropagationTimeSettings.__init__(self, int(timeStep), int(duration))
+        PropagationTimeSettings.__init__(self, int(timeStep), str(dateEnd))
+
+        celestialBody = CelestialBodyFactory.getBody(bodyString.upper())
+        self.nameBody = celestialBody.getName()
+        if bodyString.upper() == 'EARTH':
+            bodyFrame = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
+            self.inertialFrame = FramesFactory.getEME2000()
+        else:
+            bodyFrame = celestialBody.getBodyOrientedFrame()
+            self.inertialFrame = celestialBody.getInertiallyOrientedFrame()
+            #self.inertialFrame = FramesFactory.getEME2000()
+
+        celestialBodyShape = ListCelestialBodies.getBody(bodyString.upper())
+        radiusBody = celestialBodyShape.radius
+        flatBody = celestialBodyShape.flattening
+        self.body = OneAxisEllipsoid(radiusBody, flatBody, bodyFrame)
+        self.mu = celestialBody.getGM()
 
         #Needed Constant Init
-        self.ae = Constants.WGS84_EARTH_EQUATORIAL_RADIUS
-        self.mu = Constants.WGS84_EARTH_MU
+        #self.ae = Constants.WGS84_EARTH_EQUATORIAL_RADIUS
+        #self.mu = Constants.WGS84_EARTH_MU
 
         #Parameter Init
-        self.inertialFrame = FramesFactory.getEME2000()
+        #self.inertialFrame = FramesFactory.getEME2000()
         self.satelliteList = {} # Satellite List saved like a KeplerianOrbit, Key of Element is satellite Name
         self.tleList = {}
         self.rawEphemeridsList = {} # epoch, x, y, z, vx, vy, vz data sor by satellite Name
@@ -65,39 +104,46 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                 orbit = KeplerianOrbit(float(satellite["sma"]), float(satellite["ecc"]),
                                        radians(float(satellite["inc"])),
                                        radians(float(satellite["pa"])), radians(float(satellite["raan"])),
-                                       float(satellite["meanAnomaly"]),
-                                       PositionAngle.TRUE, self.inertialFrame, self.absoluteStartTime, self.mu)
+                                       radians(float(satellite["meanAnomaly"])),
+                                       PositionAngle.MEAN, self.inertialFrame, self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,
-                    "propagator": KeplerianPropagator(orbit)
+                    "propagator": KeplerianPropagator(orbit),
+                    "celestialBody": self.nameBody
                 }
             except:
-                raise NameError("start time is not defined.")
+                raise NameError("start time is not defined")
 
         elif(satellite["type"] == "cartesian"):
             try:
                 position = Vector3D(float(satellite["x"]), float(satellite["y"]), float(satellite["z"]))
                 velocity = Vector3D(float(satellite["vx"]), float(satellite["vy"]), float(satellite["vz"]))
-                orbit = KeplerianOrbit(PVCoordinates(position, velocity), FramesFactory.getEME2000(),
+                orbit = KeplerianOrbit(PVCoordinates(position, velocity), self.inertialFrame,
                                        self.absoluteStartTime, self.mu)
                 self.satelliteList[satellite["name"]] = {
                     "initialState": orbit,
-                    "propagator": KeplerianPropagator(orbit)
+                    "propagator": KeplerianPropagator(orbit),
+                    "celestialBody": self.nameBody
                 }
             except:
-                raise NameError("start time is not define")
+                raise NameError("start time is not defined")
 
         elif(satellite["type"] == "tle"):
-            line1 = satellite["line1"]
-            line2 = satellite["line2"]
-            tle = TLE(satellite["line1"], satellite["line2"])
-            propagator = TLEPropagator.selectExtrapolator(tle)
-            self.absoluteStartTime = tle.getDate()
-            self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
+            orbit = TLE(satellite["line1"], satellite["line2"])
+            propagator = TLEPropagator.selectExtrapolator(orbit)
+            if orbit.getDate().compareTo(self.absoluteStartTime) > 0:
+                self.absoluteStartTime = orbit.getDate()
+    
+            #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
-                "initialSate": tle,
-                "propagator": propagator
+                "isTLE": True,
+                "initialState": orbit,
+                "propagator": propagator,
+                "celestialBody": self.nameBody
             }
+
+        # Check if satellite outside central body
+        WarningSMA(satellite["type"], orbit, self.body, self.mu)
 
     def addGroundStation(self, groundStation):
         """
@@ -105,12 +151,13 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         :param groundStation:
         :return:
         """
-        ITRF = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
+        #ITRF = FramesFactory.getITRF(IERSConventions.IERS_2010, True)
         station = GeodeticPoint(radians(float(groundStation["latitude"])),radians(float(groundStation["longitude"])), float(groundStation["altitude"]))
-        earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-                                 Constants.WGS84_EARTH_FLATTENING,
-                                 ITRF)
-        stationFrame = TopocentricFrame(earth, station, groundStation["name"])
+        #earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
+        #                         Constants.WGS84_EARTH_FLATTENING,
+        #                         ITRF)
+    
+        stationFrame = TopocentricFrame(self.body, station, groundStation["name"])
         self.groundStationList[groundStation["name"]] = { "station": stationFrame, "passing": False,
                                                           "elev": float(groundStation["elevation"]) }
 
@@ -131,8 +178,15 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         """
         #Initialize lupinArray that will store object
 
+        # TLEs have to catch up to one another
+        for satName, sat in self.satelliteList.items():
+            initialDateCur = sat["initialState"].getDate()
+            if "isTLE" in sat and initialDateCur.compareTo(self.absoluteStartTime) < 0:
+                sat["propagator"].propagate(self.absoluteStartTime)
+                sat["initialState"] = sat["propagator"].getTLE()
+                print("Initialization: TLE of {} was propagated from {} to {}".format(satName, initialDateCur, self.absoluteStartTime))
 
-        # Initialze python array in dictionary
+        # Initialize python array in dictionary
         for key, value in self.satelliteList.items():
             self.rawEphemeridsList[key] = []
 
@@ -158,7 +212,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
                 # Format and Append position propagate to array
                 currData = {
-                    "epoch": str(self.absDate2ISOString(currState.getDate())),
+                    "epoch": currState.getDate().toString(),
                     "x": round(position.getX(), 7),
                     "y": round(position.getY(), 7),
                     "z": round(position.getZ(), 7),
@@ -185,14 +239,14 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                         ## FIN LUPIN CODE
                         if not self.visibilityMatrice[gsKey][satKey] or self.visibilityMatrice[gsKey][satKey][
                                 -1]["passing"] == False:
-                            temp_data['startDate'] = str(self.absDate2datetime(currState.getDate()))
+                            temp_data['startDate'] = currState.getDate().toString()
                             temp_data['startAz'] = az_tmp
                             temp_data['passing'] = True
                             self.visibilityMatrice[gsKey][satKey].append(temp_data)
                     else:
                         ## Si le tableau a dejà commencé à être rempli et que la matrice de visibilitié
                         if  len(self.visibilityMatrice[gsKey][satKey])>0 and self.visibilityMatrice[gsKey][satKey][-1]["passing"] == True:
-                            self.visibilityMatrice[gsKey][satKey][-1]["endDate"] = str(self.absDate2datetime(currState.getDate()))
+                            self.visibilityMatrice[gsKey][satKey][-1]["endDate"] = currState.getDate().toString()
                             self.visibilityMatrice[gsKey][satKey][-1]["endAz"] = az_tmp
                             self.visibilityMatrice[gsKey][satKey][-1]["passing"] = False
 
@@ -227,7 +281,7 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         :return:
         """
         assert (self.formatedData is not None)
-        return self.formatedData.getOEM()
+        return self.formatedData.getOEM(self.nameBody)
 
     def getVisibility(self):
         """
@@ -308,8 +362,8 @@ if __name__ == "__main__":
     start = time.time()
 
     #Init time of the mission analysis ( initial date, step between propagation, and duration)
-    myPropagation = HAL_MissionAnalysis(1, 6000)
-    myPropagation.setStartingDate("2019-02-22T18:30:00Z")
+    myPropagation = HAL_MissionAnalysis(1, "2019-02-22T18:40:00Z", 'EARTH')
+    myPropagation.setStartTime("2019-02-22T18:30:00Z")
 
     #Add my ground station
     myPropagation.addGroundStation(isae)

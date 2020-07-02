@@ -1,3 +1,5 @@
+# Original author: ISAE, continued by CS Group
+
 import json
 from jinja2 import Environment, PackageLoader, select_autoescape, Template, FileSystemLoader
 from datetime import datetime
@@ -6,7 +8,7 @@ import copy
 
 class OEMAndJSONConverter:
     """
-    This class permit to convert an a JSON File into an OEM text file
+    This class permits to convert an a JSON File into an OEM text file
     """
 
     def __init__(self, PropagationResultList):
@@ -27,8 +29,9 @@ class OEMAndJSONConverter:
     def getJSON(self):
         """
         Generate and return the JSON data related to the data result use in the constructor
-        :return:
+        Not used in the current version of JSatOrb
         """
+
         result = []
         for key, value in self.listData.items():
             jsonObj = {}
@@ -49,7 +52,7 @@ class OEMAndJSONConverter:
 
         return result
 
-    def getOEM(self):
+    def getOEM(self, centralBody):
         """
         Get the OEM data related to the data result use in the constructor
         :return:
@@ -59,8 +62,9 @@ class OEMAndJSONConverter:
             oemTemplate = f.read()
 
         output = Template(oemTemplate)
-        timeNow = str(datetime.utcnow())
-        return output.render(timeNow=timeNow, satellitesResult=self.listData)
+        timeNow = datetime.utcnow().isoformat()
+        centralBody = centralBody.lower().capitalize()
+        return output.render(timeNow=timeNow, celestialBody=centralBody, satellitesResult=self.listData)
 
 
 if __name__ == "__main__":

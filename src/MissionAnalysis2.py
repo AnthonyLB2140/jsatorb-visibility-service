@@ -17,11 +17,11 @@ from org.orekit.utils import IERSConventions, Constants
 from org.orekit.orbits import KeplerianOrbit, PositionAngle
 from org.orekit.utils import PVCoordinates
 from org.orekit.propagation.analytical import KeplerianPropagator
+
 from org.orekit.propagation.events.handlers import EventHandler
 from org.orekit.propagation.analytical.tle import TLE, TLEPropagator
 from org.orekit.python import PythonEventHandler, PythonOrekitFixedStepHandler
 from math import radians, pi, degrees
-from org.hipparchus.util import FastMath
 from org.orekit.orbits import OrbitType, PositionAngle
 from org.orekit.propagation.numerical import NumericalPropagator
 from org.hipparchus.ode.nonstiff import DormandPrince853Integrator
@@ -30,24 +30,8 @@ from org.orekit.forces.gravity.potential import GravityFieldFactory
 from org.orekit.forces.gravity import HolmesFeatherstoneAttractionModel
 from org.orekit.forces.gravity import NewtonianAttraction
 from org.orekit.propagation import Propagator, SpacecraftState
-def parse_tle(line1, line2):
-    
-    keplerian = {}
-    
-    keplerian['mean_motion'] = float(line2[52:63])
-    keplerian['eccentricity'] = float('0.' + line2[26:33])
-    keplerian['inclination'] = float(line2[8:16])
-    keplerian['right_ascension'] = float(line2[17:25])
-    keplerian['argument_of_perigee'] = float(line2[34:42])
-    keplerian['mean_anomaly'] = float(line2[43:51])
-        # Calculate semi-major axis (a) using mean motion (n) and Earth's gravitational constant (mu)
-    mu = Constants.WGS84_EARTH_MU  # Earth's gravitational constant in km^3/s^2
-    n = keplerian['mean_motion'] * 2 * FastMath.PI / 86400  # Convert mean motion to radians/minute
-    a = (mu / (n ** 2)) ** (1 / 3)  # Calculate semi-major axis in kilometers
-    keplerian['semi_major_axis'] = a
-    
-    
-    return keplerian
+from org.hipparchus.util import FastMath
+
 def WarningSMA(satType, satOrbit, centralBody, mu):
     """
     Function that issues a simple warning if the satellite's SMA is smaller
@@ -65,6 +49,24 @@ def WarningSMA(satType, satOrbit, centralBody, mu):
         radiusCur = mu**(1./3.) / nCur**(2./3.)
         if radiusCur < centralBody.getEquatorialRadius():
             print("WARNING: initial semi-major axis smaller than Equatorial Radius!")
+def parse_tle(line1, line2):
+    
+    keplerian = {}
+    
+    keplerian['mean_motion'] = float(line2[52:63])
+    keplerian['eccentricity'] = float('0.' + line2[26:33])
+    keplerian['inclination'] = float(line2[8:16])
+    keplerian['right_ascension'] = float(line2[17:25])
+    keplerian['argument_of_perigee'] = float(line2[34:42])
+    keplerian['mean_anomaly'] = float(line2[43:51])
+        # Calculate semi-major axis (a) using mean motion (n) and Earth's gravitational constant (mu)
+    mu = 398600.4418  # Earth's gravitational constant in km^3/s^2
+    n = keplerian['mean_motion'] * 2 * FastMath.PI / 86400  # Convert mean motion to radians/minute
+    a = (mu / (n ** 2)) ** (1 / 3)  # Calculate semi-major axis in kilometers
+    keplerian['semi_major_axis'] = a
+    
+    
+    return keplerian
 
 class HAL_MissionAnalysis(PropagationTimeSettings):
     """
@@ -155,38 +157,33 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
                 raise NameError("start time is not defined")
 
         elif(satellite["type"] == "tle"):
-            orbit = TLE(satellite["line1"], satellite["line2"])
-           # print("Orbit date :", orbit.getDate())
-            
-            #propagator = TLEPropagator.selectExtrapolator(orbit)
-            if orbit.getDate().compareTo(self.absoluteStartTime) > 0:
-                self.absoluteStartTime = orbit.getDate()
             keplerian = parse_tle(satellite["line1"], satellite["line2"])
             orbitTLE = TLE(satellite["line1"], satellite["line2"])
             
-            initialOrbit = KeplerianOrbit(keplerian['semi_major_axis'], keplerian['eccentricity'],
+            orbit = KeplerianOrbit(keplerian['semi_major_axis'], keplerian['eccentricity'],
             radians(keplerian['inclination']), radians(keplerian['argument_of_perigee']),
             radians(keplerian['right_ascension']), radians(keplerian['mean_anomaly']),
-            PositionAngle.MEAN, self.inertialFrame, orbit.getDate(), self.mu)
-            #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
-            defaultMass = 2.0
-            initialState = SpacecraftState(initialOrbit,defaultMass)
+            PositionAngle.MEAN, self.inertialFrame, orbitTLE.getDate(), self.mu)
+            satellite["initialOrbit"]=orbit
+            defaultMass = 2.0 # We need for the propagator to define a default mass for the calculation 
+            initialOrbit = satellite["initialOrbit"]
+            initialState = SpacecraftState(initialOrbit,defaultMass)   # We create an object initial state for the numerical propagator 
             integrator = ClassicalRungeKuttaIntegrator(self.timeStep)
             propagator = NumericalPropagator(integrator)
-            #190723 Changing back to Holmes model
-            gravityProvider = GravityFieldFactory.getNormalizedProvider(10, 10)
-            propagator.addForceModel(HolmesFeatherstoneAttractionModel(FramesFactory.getITRF(IERSConventions.IERS_2010, True), gravityProvider))
-           # propagator.addForceModel(NewtonianAttraction(self.mu))
-            propagator.setInitialState(initialState)
             propagator.setOrbitType(initialOrbit.getType())
-            print("Initial Position :", initialOrbit.getPVCoordinates())
-            print("Initial Orbit :", initialOrbit)
-           # print("Initial date :", initialOrbit.getDate())
-           
-           # propagator = KeplerianPropagator(initialOrbit)
+            propagator.setInitialState(initialState) 
+ 
+
+            propagator.addForceModel(NewtonianAttraction(self.mu))
+            
+           # propagator = TLEPropagator.selectExtrapolator(orbit)
+            if orbit.getDate().compareTo(self.absoluteStartTime) > 0:
+                self.absoluteStartTime = orbit.getDate()
+    
+            #self.absoluteEndTime = self.absoluteStartTime.shiftedBy(self.duration)
             self.satelliteList[satellite["name"]] = {
                 "isTLE": True,
-                "initialState": initialOrbit,
+                "initialState": orbit,
                 "propagator": propagator,
                 "celestialBody": self.nameBody
             }
@@ -226,24 +223,17 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
         Execute the propagation calculation
         """
         #Initialize lupinArray that will store object
-
+        
         # TLEs have to catch up to one another
+       # for satName, sat in self.satelliteList.items():
         for satName, sat in self.satelliteList.items():
             initialDateCur = sat["initialState"].getDate()
             if "isTLE" in sat and initialDateCur.compareTo(self.absoluteStartTime) < 0:
-             #   print("Initial :", sat["propagator"].getInitialState()) 
-                orbitType = sat["initialState"].getType()
+          #  if "isTLE" in sat and initialDateCur.compareTo(self.absoluteStartTime) <= 0:
                 sat["propagator"].propagate(self.absoluteStartTime)
-                sat["propagator"].setOrbitType(OrbitType.KEPLERIAN)
-            #    print("Initial :", sat["propagator"]) 
-            #    print("Initial :", sat["propagator"].getInitialState()) 
-                sat["initialState"] = sat["propagator"].getInitialState().getOrbit() 
+                sat["initialState"] = sat["propagator"].getInitialState()
                 print("Initialization: TLE of {} was propagated from {} to {}".format(satName, initialDateCur, self.absoluteStartTime))
-                print("New Position :", sat["initialState"].getPVCoordinates())
-            elif "isTLE" in sat and initialDateCur.compareTo(self.absoluteStartTime) == 0:
-                print("Initialization: TLE of {} was propagated from {} to {}".format(satName, initialDateCur, self.absoluteStartTime))
-                print("New Position :", sat["initialState"].getPVCoordinates())
-             #   print("Initial :", sat["propagator"].getInitialState()) 
+              #  print("TLE :",sat["initialState"])
         # Initialize python array in dictionary
         for key, value in self.satelliteList.items():
             self.rawEphemeridsList[key] = []
@@ -259,16 +249,15 @@ class HAL_MissionAnalysis(PropagationTimeSettings):
 
         # Propagate
         extrapDate = self.absoluteStartTime
-        limitDate= self.absoluteStartTime.shiftedBy(self.timeStep*5)  
         while (extrapDate.compareTo(self.absoluteEndTime) <= 0.0):
             for satKey, satValue in self.satelliteList.items():
                 currState = satValue['propagator'].propagate(extrapDate)
-            #    if extrapDate.compareTo(limitDate) <= 0.0:print("currState :", currState)  
+
                 # Get and Format Ephemerids Informations
                 pVCoordinates = currState.getOrbit().getPVCoordinates()
                 position = pVCoordinates.getPosition()
                 velocity= pVCoordinates.getVelocity()
-             #  if extrapDate.compareTo(limitDate) <= 0.0:print("position :",position)  
+
                 # Format and Append position propagate to array
                 currData = {
                     "epoch": currState.getDate().toString(),
